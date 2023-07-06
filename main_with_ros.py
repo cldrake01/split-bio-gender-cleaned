@@ -3,8 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
+from imblearn.over_sampling import RandomOverSampler
 
-# Define your model architecture
+
 class GenderRecognition(nn.Module):
     def __init__(self, num_classes_inner):
         super(GenderRecognition, self).__init__()
@@ -56,17 +57,34 @@ train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sh
 test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
 val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
+# Apply Random Oversampling (ROS) to the training data
+# Exclude 'female-20-29' and 'male-30-49' classes
+ros = RandomOverSampler(
+    sampling_strategy={'female-0-12': 1000, 'female-13-19': 1000, 'female-30-49': 1000, 'female-50-64': 1000,
+                       'female-65-100': 1000, 'male-0-12': 1000, 'male-13-19': 1000, 'male-20-29': 1000,
+                       'male-50-64': 1000, 'male-65-100': 1000}
+)
+train_data_resampled, train_labels_resampled = ros.fit_resample(train_data.data, train_data.targets)
+
+train_data_resampled = torch.from_numpy(train_data_resampled)
+train_labels_resampled = torch.from_numpy(train_labels_resampled)
+
+train_dataset_resampled = torch.utils.data.TensorDataset(train_data_resampled,train_labels_resampled)
+
+train_loader_resampled = torch.utils.data.DataLoader(train_dataset_resampled, batch_size=batch_size, shuffle=True)
+
 num_classes = len(train_data.classes)
 model = GenderRecognition(num_classes).to(device)
 
 criterion = nn.CrossEntropyLoss().to(device)
+
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
 num_epochs = 10
 for epoch in range(num_epochs):
     model.train()
-    for inputs, labels in train_loader:
+    for inputs, labels in train_loader_resampled:
         inputs = inputs.to(device)
         labels = labels.to(device)
 
@@ -96,14 +114,14 @@ for epoch in range(num_epochs):
 
             # Compute the accuracy
             _, predicted = torch.max(outputs, 1)
-        val_total += labels.size(0)
-        val_correct += (predicted == labels).sum().item()
+            val_total += labels.size(0)
+            val_correct += (predicted == labels).sum().item()
 
-val_accuracy = 100 * val_correct / val_total
-val_loss /= len(val_loader)
+    val_accuracy = 100 * val_correct / val_total
+    val_loss /= len(val_loader)
 
-print('Epoch [{}/{}], Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'
-      .format(epoch + 1, num_epochs, val_loss, val_accuracy))
+    print('Epoch [{}/{}], Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'
+          .format(epoch + 1, num_epochs, val_loss, val_accuracy))
 
 # Test loop
 model.eval()

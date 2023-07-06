@@ -5,12 +5,11 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from imblearn.over_sampling import SMOTE
 
-# Define your model architecture
+
 class GenderRecognition(nn.Module):
     def __init__(self, num_classes_inner):
         super(GenderRecognition, self).__init__()
 
-        # Convolutional layers
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -18,7 +17,6 @@ class GenderRecognition(nn.Module):
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # Fully connected layers
         self.fc1 = nn.Linear(32 * 56 * 56, 128)
         self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(128, num_classes_inner)
@@ -39,17 +37,14 @@ class GenderRecognition(nn.Module):
         return x
 
 
-# Set the path to your data directory
 data_dir = '/83/split-bio-gender-cleaned'
 
-# Define the transformations to apply to the images
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Load the training data
 train_data = ImageFolder(root=data_dir + '/train', transform=transform)
 
 # Apply SMOTE to the training data for all classes except "female-20-29" and "male-30-49"
@@ -62,29 +57,22 @@ for class_name in train_data.classes:
         class_samples_resampled, _ = SMOTE().fit_resample(class_samples, class_samples)
         train_data_smote.samples += [(path, class_idx) for path, _ in train_data.samples[class_samples_resampled]]
 
-# Load the test data
 test_data = ImageFolder(root=data_dir + '/test', transform=transform)
 
-# Load the validation data
 val_data = ImageFolder(root=data_dir + '/val', transform=transform)
 
-# Set the device for training
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Create data loaders
 batch_size = 32
 train_loader = torch.utils.data.DataLoader(train_data_smote, batch_size=batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
 val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
-# Create an instance of your model
 num_classes = len(train_data.classes)
 model = GenderRecognition(num_classes).to(device)
 
-# Define the loss function
 criterion = nn.CrossEntropyLoss().to(device)
 
-# Define the optimizer
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
@@ -95,13 +83,10 @@ for epoch in range(num_epochs):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        # Forward pass
         outputs = model(inputs)
 
-        # Compute the loss
         loss = criterion(outputs, labels)
 
-        # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -116,14 +101,11 @@ for epoch in range(num_epochs):
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            # Forward pass
             outputs = model(inputs)
 
-            # Compute the loss
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
-            # Compute the accuracy
             _, predicted = torch.max(outputs, 1)
             val_total += labels.size(0)
             val_correct += (predicted == labels).sum().item()
@@ -143,15 +125,12 @@ with torch.no_grad():
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        # Forward pass
         outputs = model(inputs)
 
-        # Compute the accuracy
         _, predicted = torch.max(outputs, 1)
         test_total += labels.size(0)
         test_correct += (predicted == labels).sum().item()
 
-# Compute the test accuracy
 test_accuracy = 100 * test_correct / test_total
 
 print('Test Accuracy: {:.2f}%'.format(test_accuracy))

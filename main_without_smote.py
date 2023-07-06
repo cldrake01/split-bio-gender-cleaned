@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
-from imblearn.over_sampling import SMOTE
 
-
+# Define your model architecture
 class GenderRecognition(nn.Module):
     def __init__(self, num_classes_inner):
         super(GenderRecognition, self).__init__()
@@ -17,6 +16,7 @@ class GenderRecognition(nn.Module):
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
+        # Fully connected layers
         self.fc1 = nn.Linear(32 * 56 * 56, 128)
         self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(128, num_classes_inner)
@@ -46,9 +46,7 @@ transform = transforms.Compose([
 ])
 
 train_data = ImageFolder(root=data_dir + '/train', transform=transform)
-
 test_data = ImageFolder(root=data_dir + '/test', transform=transform)
-
 val_data = ImageFolder(root=data_dir + '/val', transform=transform)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -58,27 +56,10 @@ train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sh
 test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
 val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
-# Apply SMOTE oversampling to the training data
-# Exclude 'female-20-29' and 'male-30-49' classes
-smote = SMOTE(
-    sampling_strategy={'female-0-12': 1000, 'female-13-19': 1000, 'female-30-49': 1000, 'female-50-64': 1000,
-                       'female-65-100': 1000, 'male-0-12': 1000, 'male-13-19': 1000, 'male-20-29': 1000,
-                       'male-50-64': 1000, 'male-65-100': 1000}
-)
-train_data_resampled, train_labels_resampled = smote.fit_resample(train_data.data, train_data.targets)
-
-train_data_resampled = torch.from_numpy(train_data_resampled)
-train_labels_resampled = torch.from_numpy(train_labels_resampled)
-
-train_dataset_resampled = torch.utils.data.TensorDataset(train_data_resampled, train_labels_resampled)
-
-train_loader_resampled = torch.utils.data.DataLoader(train_dataset_resampled, batch_size=batch_size, shuffle=True)
-
 num_classes = len(train_data.classes)
 model = GenderRecognition(num_classes).to(device)
 
 criterion = nn.CrossEntropyLoss().to(device)
-
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
@@ -91,8 +72,10 @@ for epoch in range(num_epochs):
 
         outputs = model(inputs)
 
+        # Compute the loss
         loss = criterion(outputs, labels)
 
+        # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -111,15 +94,16 @@ for epoch in range(num_epochs):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
+            # Compute the accuracy
             _, predicted = torch.max(outputs, 1)
-            val_total += labels.size(0)
-            val_correct += (predicted == labels).sum().item()
+        val_total += labels.size(0)
+        val_correct += (predicted == labels).sum().item()
 
-    val_accuracy = 100 * val_correct / val_total
-    val_loss /= len(val_loader)
+val_accuracy = 100 * val_correct / val_total
+val_loss /= len(val_loader)
 
-    print('Epoch [{}/{}], Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'
-          .format(epoch + 1, num_epochs, val_loss, val_accuracy))
+print('Epoch [{}/{}], Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'
+      .format(epoch + 1, num_epochs, val_loss, val_accuracy))
 
 # Test loop
 model.eval()
@@ -136,6 +120,7 @@ with torch.no_grad():
         test_total += labels.size(0)
         test_correct += (predicted == labels).sum().item()
 
+# Compute the test accuracy
 test_accuracy = 100 * test_correct / test_total
 
 print('Test Accuracy: {:.2f}%'.format(test_accuracy))

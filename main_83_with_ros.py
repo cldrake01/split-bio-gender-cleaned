@@ -6,6 +6,10 @@ from torchvision.datasets import ImageFolder
 from imblearn.over_sampling import RandomOverSampler
 
 
+resnet50 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_resnet50', pretrained=True)
+utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_convnets_processing_utils')
+
+
 class GenderRecognition(nn.Module):
     def __init__(self, num_classes_inner):
         super(GenderRecognition, self).__init__()
@@ -60,9 +64,9 @@ val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffl
 # Apply Random Oversampling (ROS) to the training data
 # Exclude 'female-20-29' and 'male-30-49' classes
 ros = RandomOverSampler(
-    sampling_strategy={'female-0-12': 1000, 'female-13-19': 1000, 'female-30-49': 1000, 'female-50-64': 1000,
-                       'female-65-100': 1000, 'male-0-12': 1000, 'male-13-19': 1000, 'male-20-29': 1000,
-                       'male-50-64': 1000, 'male-65-100': 1000}
+    sampling_strategy={'female-0-12': 19_000, 'female-13-19': 19_000, 'female-30-49': 19_000, 'female-50-64': 19_000,
+                       'female-65-100': 19_000, 'male-0-12': 19_000, 'male-13-19': 19_000, 'male-20-29': 19_000,
+                       'male-50-64': 19_000, 'male-65-100': 19_000}
 )
 train_data_resampled, train_labels_resampled = ros.fit_resample(train_data.data, train_data.targets)
 

@@ -77,14 +77,11 @@ test_data_flat: np.ndarray = np.array(test_data.imgs, dtype=object).reshape(-1, 
 
 train_data_resampled, train_labels_resampled = resample()
 
-print(train_data_resampled)
-
 os.makedirs('ros-split-bio-gender-cleaned' + '/train', exist_ok=True)
 os.makedirs('ros-split-bio-gender-cleaned' + '/test', exist_ok=True)
 
 print("Resampled training data size: ", len(train_data_resampled))
 
-# Write resampled training images to new directory
 # Write resampled training images to new directory
 for i in range(len(train_data_resampled)):
     # Get image and label
@@ -101,11 +98,11 @@ for i in range(len(train_data_resampled)):
     # Create new path
     new_path: str = folder + '/' + filename
 
-    # Convert the tensor to a NumPy array
-    image_array = image.numpy()
+    # Squeeze extra dimensions from the tensor
+    image_squeezed = np.squeeze(image.numpy(), axis=0)
 
     # Convert the NumPy array to a PIL image
-    image_pil = Image.fromarray((image_array * 255).astype(np.uint8))
+    image_pil = Image.fromarray((image_squeezed * 255).astype(np.uint8))
 
     # Save image to new path
     image_pil.save(new_path)

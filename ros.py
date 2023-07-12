@@ -43,12 +43,12 @@ class GenderRecognition(nn.Module):
         return x
 
 
-@lru_cache(maxsize=None)
-def resample() -> tuple[np.ndarray, np.ndarray]:
-    return ros.fit_resample(train_data, train_data.targets)
+# @lru_cache(maxsize=None)
+# def resample() -> tuple[np.ndarray, np.ndarray]:
+#     return ros.fit_resample(train_data, train_data.targets)
 
 
-data_dir: str = '/Users/collin/Downloads/split-bio-gender-cleaned'
+data_dir: str = '/Users/collin/Downloads/pre-ros-split-bio-gender-cleaned'
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -75,43 +75,31 @@ print("Original training data size: ", len(train_data.targets))
 train_data_flat: np.ndarray = np.array(train_data.imgs, dtype=object).reshape(-1, 1)
 test_data_flat: np.ndarray = np.array(test_data.imgs, dtype=object).reshape(-1, 1)
 
-train_data_resampled, train_labels_resampled = resample()
-
-os.makedirs('ros-split-bio-gender-cleaned' + '/train', exist_ok=True)
-os.makedirs('ros-split-bio-gender-cleaned' + '/test', exist_ok=True)
+train_data_resampled, train_labels_resampled = ros.fit_resample(train_data, train_data.targets)
 
 print("Resampled training data size: ", len(train_data_resampled))
+
+# Set the directory to save the new images
+save_dir = 'post-ros-split-bio-gender-cleaned/train'
+os.makedirs(save_dir, exist_ok=True)
 
 # Write resampled training images to new directory
 for i in range(len(train_data_resampled)):
     # Get image and label
-    image: np.ndarray = train_data_resampled[i][0]
+    image: torch.Tensor = train_data_resampled[i][0]
     label: int = train_data_resampled[i][1]
+
     # Get image path
     path: str = train_data.imgs[i][0]
+
     # Get image filename
     filename: str = os.path.basename(path)
-    # Get image folder
-    folder: str = os.path.dirname(path)
-    # Get image extension
-    extension: str = os.path.splitext(filename)[1]
-    # Create new path
-    new_path: str = folder + '/' + filename
+
+    # Create the new path for saving
+    new_path: str = os.path.join(save_dir, filename)
 
     # Convert the tensor to a NumPy array
-    image_array = image.numpy()
-
-    # Determine the shape of the tensor
-    shape = image_array.shape
-
-    if len(shape) == 3 and shape[0] == 1:
-        # If the tensor has shape (1, height, width), squeeze the first dimension
-        image_array = np.squeeze(image_array, axis=0)
-    elif len(shape) == 4 and shape[0] == 1:
-        # If the tensor has shape (1, channels, height, width), squeeze the first dimension
-        image_array = np.squeeze(image_array, axis=0)
-        # Transpose the array to match the shape (height, width, channels)
-        image_array = np.transpose(image_array, (1, 2, 0))
+    image_array = image.permute(1, 2, 0).numpy()  # Assumes the tensor shape is (channels, height, width)
 
     # Convert the NumPy array to a PIL image
     image_pil = Image.fromarray((image_array * 255).astype(np.uint8))
@@ -120,3 +108,6 @@ for i in range(len(train_data_resampled)):
     image_pil.save(new_path)
 
     print("Saving image: ", new_path)
+
+
+print("Done saving images to new directory")

@@ -109,5 +109,4 @@ for i in range(len(train_data_resampled)):
 
     print("Saving image: ", new_path)
 
-
 print("Done saving images to new directory")

@@ -98,11 +98,23 @@ for i in range(len(train_data_resampled)):
     # Create new path
     new_path: str = folder + '/' + filename
 
-    # Squeeze extra dimensions from the tensor
-    image_squeezed = np.squeeze(image.numpy(), axis=0)
+    # Convert the tensor to a NumPy array
+    image_array = image.numpy()
+
+    # Determine the shape of the tensor
+    shape = image_array.shape
+
+    if len(shape) == 3 and shape[0] == 1:
+        # If the tensor has shape (1, height, width), squeeze the first dimension
+        image_array = np.squeeze(image_array, axis=0)
+    elif len(shape) == 4 and shape[0] == 1:
+        # If the tensor has shape (1, channels, height, width), squeeze the first dimension
+        image_array = np.squeeze(image_array, axis=0)
+        # Transpose the array to match the shape (height, width, channels)
+        image_array = np.transpose(image_array, (1, 2, 0))
 
     # Convert the NumPy array to a PIL image
-    image_pil = Image.fromarray((image_squeezed * 255).astype(np.uint8))
+    image_pil = Image.fromarray((image_array * 255).astype(np.uint8))
 
     # Save image to new path
     image_pil.save(new_path)

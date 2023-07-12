@@ -84,6 +84,8 @@ save_dir = 'post-ros-split-bio-gender-cleaned/train'
 os.makedirs(save_dir, exist_ok=True)
 
 # Write resampled training images to new directory
+to_pil = transforms.ToPILImage()
+
 for i in range(len(train_data_resampled)):
     # Get image and label
     image: torch.Tensor = train_data_resampled[i][0]
@@ -95,14 +97,19 @@ for i in range(len(train_data_resampled)):
     # Get image filename
     filename: str = os.path.basename(path)
 
+    # Extract the relevant directory information
+    gender_age_dir = os.path.dirname(path)
+    category_dir = os.path.basename(gender_age_dir)
+
+    # Create the new directories if they don't exist
+    save_dir = os.path.join('split-bio-gender-cleaned/test', category_dir)
+    os.makedirs(save_dir, exist_ok=True)
+
     # Create the new path for saving
     new_path: str = os.path.join(save_dir, filename)
 
-    # Convert the tensor to a NumPy array
-    image_array = image.permute(1, 2, 0).numpy()  # Assumes the tensor shape is (channels, height, width)
-
-    # Convert the NumPy array to a PIL image
-    image_pil = Image.fromarray((image_array * 255).astype(np.uint8))
+    # Convert the tensor to a PIL image
+    image_pil = to_pil(image)
 
     # Save image to new path
     image_pil.save(new_path)

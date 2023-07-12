@@ -22,30 +22,25 @@ ros = RandomOverSampler(
                        'female-65-100': 19_000, 'male-0-12': 19_000, 'male-13-19': 19_000, 'male-20-29': 19_000,
                        'male-50-64': 19_000, 'male-65-100': 19_000}
 )
-train_data_resampled, train_labels_resampled = ros.fit_resample(train_data.data, train_data.targets)
+train_data_resampled, train_labels_resampled = ros.fit_resample(train_data, train_data.targets)
 
-file_path = r'/Users/collin/Downloads/ros-split-bio-gender-cleaned'
+print("Original training data size: ", len(train_data.targets))
 
-for file in train_data_resampled:
-    os.makedirs(file_path, exist_ok=True)
-    with open(os.open(file_path, os.O_CREAT | os.O_WRONLY, 0o777), 'w') as fh:
-        fh.write(file)
+os.makedirs('split-bio-gendered-cleaned-ros', exist_ok=True)
+os.makedirs('split-bio-gendered-cleaned-ros/train', exist_ok=True)
+os.makedirs('split-bio-gendered-cleaned-ros/test', exist_ok=True)
 
-# The default umask is 0o22 which turns off write permission of group and others
-# os.umask(0)
-# with open(os.open(file_path, os.O_CREAT | os.O_WRONLY, 0o777), 'w') as fh:
-#     fh.write('content')
+# For each directory in the training data, create a new directory in the resampled training data
+# and save the images to the new directory
+for directory in os.listdir(data_dir + '/train'):
+    print(directory)
+    os.makedirs('split-bio-gendered-cleaned-ros/train/' + directory, exist_ok=True)
+    for file in os.listdir(data_dir + '/train/' + directory):
+        os.rename(data_dir + '/train/' + directory + '/' + file,
+                  'split-bio-gendered-cleaned-ros/train/' + directory + '/' + file)
 
-# train_data_resampled = torch.from_numpy(train_data_resampled)
-# train_labels_resampled = torch.from_numpy(train_labels_resampled)
-#
-# train_dataset_resampled = torch.utils.data.TensorDataset(train_data_resampled,train_labels_resampled)
-#
-# train_loader_resampled = torch.utils.data.DatraLoader(train_dataset_resampled, batch_size=batch_size, shuffle=True)
-#
-# num_classes = len(train_data.classes)
-# model = GenderRecognition(num_classes).to(device)
-#
-# criterion = nn.CrossEntropyLoss().to(device)
-#
-# optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+# Then write the files to the new directories
+for i in range(len(train_data_resampled)):
+    print(i)
+    image, label = train_data_resampled[i]
+    image.save('split-bio-gendered-cleaned-ros/train/' + train_data.classes[label] + '/' + str(i) + '.jpg')

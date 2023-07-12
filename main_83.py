@@ -81,7 +81,6 @@ optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 num_epochs = 10
 for epoch in range(num_epochs):
     model.train()
-    loop += 1
     for inputs, labels in train_loader:
         inputs = inputs.to(device)
         labels = labels.to(device)

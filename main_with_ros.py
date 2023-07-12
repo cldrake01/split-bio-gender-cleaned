@@ -1,5 +1,6 @@
-import torch
+import numpy as np
 import torch.nn as nn
+import torch.utils.data
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
@@ -58,20 +59,33 @@ test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuf
 val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
 # Apply Random Oversampling (ROS) to the training data
-# Exclude 'female-20-29' and 'male-30-49' classes
 ros = RandomOverSampler(
-    sampling_strategy={'female-0-12': 19_000, 'female-13-19': 19_000, 'female-30-49': 19_000, 'female-50-64': 19_000,
-                       'female-65-100': 19_000, 'male-0-12': 19_000, 'male-13-19': 19_000, 'male-20-29': 19_000,
-                       'male-50-64': 19_000, 'male-65-100': 19_000}
+    # sampling_strategy={
+    #     'female-0-12': 19_000, 'female-13-19': 19_000, 'female-30-49': 19_000, 'female-50-64': 19_000,
+    #     'female-65-100': 19_000, 'male-0-12': 19_000, 'male-13-19': 19_000, 'male-20-29': 19_000,
+    #     'male-50-64': 19_000, 'male-65-100': 19_000
+    # }
 )
-train_data_resampled, train_labels_resampled = ros.fit_resample(train_data.data, train_data.targets)
 
-train_data_resampled = torch.from_numpy(train_data_resampled)
-train_labels_resampled = torch.from_numpy(train_labels_resampled)
+print("Original training data size: ", len(train_data.targets))
 
-train_dataset_resampled = torch.utils.data.TensorDataset(train_data_resampled,train_labels_resampled)
+np.array(train_data.imgs, dtype=object).reshape(-1, 1)
+np.array(test_data.imgs, dtype=object).reshape(-1, 1)
 
-train_loader_resampled = torch.utils.data.DatraLoader(train_dataset_resampled, batch_size=batch_size, shuffle=True)
+train_data_resampled, train_labels_resampled = ros.fit_resample(train_data, train_data.targets)
+
+print("Resampled training data size: ", len(train_labels_resampled))
+
+train_dataset_resampled = torch.utils.data.TensorDataset(
+    torch.from_numpy(train_data_resampled),
+    torch.from_numpy(train_labels_resampled)
+)
+
+train_loader_resampled = torch.utils.data.DataLoader(
+    train_dataset_resampled,
+    batch_size=batch_size,
+    shuffle=True
+)
 
 num_classes = len(train_data.classes)
 model = GenderRecognition(num_classes).to(device)

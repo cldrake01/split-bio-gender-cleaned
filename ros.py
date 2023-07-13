@@ -1,4 +1,7 @@
 import os
+from time import sleep
+
+import cv2
 import torch
 import numpy as np
 import torch.nn as nn
@@ -68,7 +71,9 @@ test_loader: torch.utils.data.DataLoader = torch.utils.data.DataLoader(test_data
 val_loader: torch.utils.data.DataLoader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
 # Apply Random Oversampling (ROS) to the training data
-ros = RandomOverSampler()
+ros = RandomOverSampler(
+    sampling_strategy='not majority'
+)
 
 print("Original training data size: ", len(train_data.targets))
 
@@ -83,37 +88,112 @@ print("Resampled training data size: ", len(train_data_resampled))
 save_dir = 'post-ros-split-bio-gender-cleaned/train'
 os.makedirs(save_dir, exist_ok=True)
 
-# Write resampled training images to new directory
-to_pil = transforms.ToPILImage()
+print("len: ", len(train_data_resampled))
+print("range: ", range(len(train_data_resampled)))
 
-for i in range(len(train_data_resampled)):
-    # Get image and label
-    image: torch.Tensor = train_data_resampled[i][0]
-    label: int = train_data_resampled[i][1]
+print("print(train_data_resampled)")
+print(train_data_resampled)
+print("print(train_data_resampled[0])")
+print(train_data_resampled[0])
+print("print(train_data_resampled[1])")
+print(train_data_resampled[1])
+print("print(train_data_resampled[0][0])")
+print(train_data_resampled[0][0])
+print("print(train_data_resampled[1][0])")
+print(train_data_resampled[1][0])
+print("print(train_data_resampled[0][-1])")
+print(train_data_resampled[0][-1])
+print("print(train_data_resampled[1][-1])")
+print(train_data_resampled[1][-1])
+print("print(train_data_resampled[-1][0])")
+print(train_data_resampled[-1][0])
+print("print(train_data_resampled[-1][-1])")
+print(train_data_resampled[-1][-1])
 
-    # Get image path
-    path: str = train_data.imgs[i][0]
+for f in torch.unsqueeze(train_data_resampled[0][0], 0):
 
-    # Get image filename
-    filename: str = os.path.basename(path)
+    print("f: ", f)
 
-    # Extract the relevant directory information
-    gender_age_dir = os.path.dirname(path)
-    category_dir = os.path.basename(gender_age_dir)
+    for i in range(len(train_data_resampled)):
+        # Get image and label
+        image: torch.Tensor = train_data_resampled[i][0]
+        label: int = train_data_resampled[i][1]
 
-    # Create the new directories if they don't exist
-    save_dir = os.path.join('split-bio-gender-cleaned/test', category_dir)
-    os.makedirs(save_dir, exist_ok=True)
+        # Ensure the image tensor has 3 channels (RGB)
+        if image.shape[0] != 3:
+            image = image.repeat(3, 1, 1)
 
-    # Create the new path for saving
-    new_path: str = os.path.join(save_dir, filename)
+        # Convert the tensor to a numpy array
+        image_np = image.permute(1, 2, 0).numpy()  # Assumes the tensor shape is (channels, height, width)
 
-    # Convert the tensor to a PIL image
-    image_pil = to_pil(image)
+        # Convert the numpy array to BGR format (required by OpenCV)
+        image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
 
-    # Save image to new path
-    image_pil.save(new_path)
+        image_bgr = cv2.equalizeHist(image_bgr)
 
-    print("Saving image: ", new_path)
+        # Extract the relevant directory information
+        gender_age_dir = train_data_resampled[i][0][0]
+        category_dir = train_data.classes + gender_age_dir
+
+        # Create the new directories if they don't exist
+        save_category_dir = os.path.join(save_dir, category_dir)
+        os.makedirs(save_category_dir, exist_ok=True)
+
+        filename: str = r'{}-{}-{}.jpg'.format(category_dir, label, i)
+
+        print("filename: ", filename)
+
+        # Create the new path for saving
+        new_path: str = os.path.join(save_category_dir, filename)
+
+        # Save image to new path using OpenCV
+        cv2.imwrite(new_path, image_bgr)
+
+        print("Saving image: ", new_path)
+
+        if i % 23323.0 == 0.0:
+            f += 1
+            print("f: ", f)
 
 print("Done saving images to new directory")
+
+# for i in range(len(train_data_resampled)):
+#     # Get image and label
+#     image: torch.Tensor = train_data_resampled[i][0]
+#     label: int = train_data_resampled[i][1]
+#
+#     # Ensure the image tensor has 3 channels (RGB)
+#     if image.shape[0] != 3:
+#         image = image.repeat(3, 1, 1)
+#
+#     # Get image path
+#     path: str = train_data_resampled[i][0]
+#
+#     # Get image filename
+#     filename: str = os.path.basename(path)
+#
+#     # Extract the relevant directory information
+#     gender_age_dir = os.path.dirname(path)
+#     category_dir = os.path.basename(gender_age_dir)
+#
+#     # Create the new directories if they don't exist
+#     save_dir = os.path.join('post-ros-split-bio-gender-cleaned/train', category_dir)
+#     os.makedirs(save_dir, exist_ok=True)
+#
+#     # Create the new path for saving
+#     new_path: str = os.path.join(save_dir, filename)
+#
+#     image = image * 80
+#
+#     # Convert the tensor to a numpy array
+#     image_np = image.permute(1, 2, 0).numpy()  # Assumes the tensor shape is (channels, height, width)
+#
+#     # Convert the numpy array to BGR format (required by OpenCV)
+#     image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+#
+#     # Save image to new path using OpenCV
+#     cv2.imwrite(new_path, image_bgr)
+#
+#     # print("Saving image: ", new_path)
+#
+# print("Done saving images to new directory")

@@ -1,6 +1,4 @@
 import os
-from time import sleep
-
 import cv2
 import torch
 import numpy as np
@@ -13,45 +11,11 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from imblearn.over_sampling import RandomOverSampler
 
-
-class GenderRecognition(nn.Module):
-    def __init__(self, num_classes_inner: int):
-        super(GenderRecognition, self).__init__()
-
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        # Fully connected layers
-        self.fc1 = nn.Linear(32 * 56 * 56, 128)
-        self.relu3 = nn.ReLU()
-        self.fc2 = nn.Linear(128, num_classes_inner)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.conv1(x)
-        x = self.relu1(x)
-        x = self.pool1(x)
-        x = self.conv2(x)
-        x = self.relu2(x)
-        x = self.pool2(x)
-
-        x = x.view(x.size(0), -1)
-        x = self.fc1(x)
-        x = self.relu3(x)
-        x = self.fc2(x)
-
-        return x
-
-
 # @lru_cache(maxsize=None)
 # def resample() -> tuple[np.ndarray, np.ndarray]:
 #     return ros.fit_resample(train_data, train_data.targets)
 
-
-data_dir: str = '/Users/collin/Downloads/pre-ros-split-bio-gender-cleaned'
+data_dir: str = '/Users/collindrake/Downloads/pre-ros-split-bio-gender-cleaned'
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -80,44 +44,24 @@ print("Original training data size: ", len(train_data.targets))
 train_data_flat: np.ndarray = np.array(train_data.imgs, dtype=object).reshape(-1, 1)
 test_data_flat: np.ndarray = np.array(test_data.imgs, dtype=object).reshape(-1, 1)
 
-train_data_resampled, train_labels_resampled = ros.fit_resample(train_data, train_data.targets)
+X, y = ros.fit_resample(train_data, train_data.targets)
 
-print("Resampled training data size: ", len(train_data_resampled))
+print("Resampled training data size: ", len(X))
 
 # Set the directory to save the new images
 save_dir = 'post-ros-split-bio-gender-cleaned/train'
 os.makedirs(save_dir, exist_ok=True)
 
-print("len: ", len(train_data_resampled))
-print("range: ", range(len(train_data_resampled)))
-
+print("len: ", len(X))
+print("range: ", range(len(X)))
 print("print(train_data_resampled)")
-print(train_data_resampled)
-print("print(train_data_resampled[0])")
-print(train_data_resampled[0])
-print("print(train_data_resampled[1])")
-print(train_data_resampled[1])
-print("print(train_data_resampled[0][0])")
-print(train_data_resampled[0][0])
-print("print(train_data_resampled[1][0])")
-print(train_data_resampled[1][0])
-print("print(train_data_resampled[0][-1])")
-print(train_data_resampled[0][-1])
-print("print(train_data_resampled[1][-1])")
-print(train_data_resampled[1][-1])
-print("print(train_data_resampled[-1][0])")
-print(train_data_resampled[-1][0])
-print("print(train_data_resampled[-1][-1])")
-print(train_data_resampled[-1][-1])
 
-for f in torch.unsqueeze(train_data_resampled[0][0], 0):
+for _folder in X:
 
-    print("f: ", f)
-
-    for i in range(len(train_data_resampled)):
+    for _image in range(len(_folder)):
         # Get image and label
-        image: torch.Tensor = train_data_resampled[i][0]
-        label: int = train_data_resampled[i][1]
+        image: torch.Tensor = X[_image][0]
+        label: int = X[_image][1]
 
         # Ensure the image tensor has 3 channels (RGB)
         if image.shape[0] != 3:
@@ -132,14 +76,14 @@ for f in torch.unsqueeze(train_data_resampled[0][0], 0):
         image_bgr = cv2.equalizeHist(image_bgr)
 
         # Extract the relevant directory information
-        gender_age_dir = train_data_resampled[i][0][0]
+        gender_age_dir = X[_image][0][0]
         category_dir = train_data.classes + gender_age_dir
 
         # Create the new directories if they don't exist
         save_category_dir = os.path.join(save_dir, category_dir)
         os.makedirs(save_category_dir, exist_ok=True)
 
-        filename: str = r'{}-{}-{}.jpg'.format(category_dir, label, i)
+        filename: str = r'{}-{}-{}.jpg'.format(category_dir, label, _image)
 
         print("filename: ", filename)
 
@@ -151,9 +95,9 @@ for f in torch.unsqueeze(train_data_resampled[0][0], 0):
 
         print("Saving image: ", new_path)
 
-        if i % 23323.0 == 0.0:
-            f += 1
-            print("f: ", f)
+        # if i % 23323.0 == 0.0:
+        #     f += 1
+        #     print("f: ", f)
 
 print("Done saving images to new directory")
 

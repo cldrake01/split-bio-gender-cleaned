@@ -39,30 +39,32 @@ X, y = ros.fit_resample(train_loader_dataset, train_data.targets)
 
 print("Resampled training data size: ", len(X))
 
-save_dir = 'post-ros-split-bio-gender-cleaned'
+save_dir: str = 'post-ros-split-bio-gender-cleaned'
 os.makedirs(save_dir, exist_ok=True)
 
-print("len: ", len(X))
+file: int = 0
 
-file = 0
+gender_age_dir: int = 0
 
 for folder in X:
 
-    file = file + 1
+    gender_age_dir += 1
 
-    str_file = f'{file}'
+    file += 1
+
+    str_file: str = f'{file}'
 
     # os.makedirs(os.path.join(save_dir, folder))
-
-    gender_age_dir = 0
 
     for image_index in range(len(folder)):
 
         image, label = folder[image_index]
 
-        str_gender_age_dir = f'{gender_age_dir}'
+        str_label: str = f'{label}'
 
-        os.makedirs(save_dir + '/' + str_gender_age_dir + '/' + label, exist_ok=True)
+        str_gender_age_dir: str = f'{gender_age_dir}'
+
+        os.makedirs(save_dir + '/' + str_gender_age_dir + '/' + str_label, exist_ok=True)
 
         image = image * 255
 
@@ -73,14 +75,12 @@ for folder in X:
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         # image_bgr = cv2.equalizeHist(image_bgr)
 
-        filename = f'{str_file}.jpg'
+        filename: str = f'{str_file}.jpg'
 
         final_path = os.path.join(save_dir, str_gender_age_dir, filename)
 
         cv2.imwrite(final_path, image_rgb)
 
         print("Saving image:", final_path)
-
-        gender_age_dir = gender_age_dir + 1
 
 print("Done saving images to new directory")

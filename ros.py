@@ -1,86 +1,89 @@
 import os
 import cv2
 import numpy as np
+from tqdm import tqdm
 import torch.utils.data
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from imblearn.over_sampling import RandomOverSampler
 
-data_dir: str = '/Users/collindrake/Downloads/pre-ros-split-bio-gender-cleaned'
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-])
+def random_over_sampling(data_dir: str, save_dir: str = 'post-ros-split-bio-gender-cleaned/train') -> None:
+    """
+    Resample the training data to handle class imbalance issue. The resampled data will be saved to the specified
+    directory. Note: This function is only for the training data. The validation and test data should not be resampled.
+    :param data_dir: The directory of the training data, e.g.
+     '/Users/collindrake/Downloads/pre-ros-split-bio-gender-cleaned'
+    :param save_dir: The directory to which the final results will be saved. The default parameter is sufficient for
+     Linux and macOS users.
+    :return: None
+    """
 
-train_data = ImageFolder(root=data_dir + '/train', transform=transform)
-test_data = ImageFolder(root=data_dir + '/test', transform=transform)
-val_data = ImageFolder(root=data_dir + '/val', transform=transform)
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ])
 
-batch_size = 32
-train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=False)
-test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
-val_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False)
+    train_data = ImageFolder(root=data_dir + '/train', transform=transform)
 
-# Handle class imbalance issue by using weighted loss function or other techniques
+    batch_size = 32
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=False)
 
-ros = RandomOverSampler(sampling_strategy='not majority')
-train_loader_dataset = np.fromiter(train_loader.dataset, dtype=object)
-train_loader_dataset = np.reshape(train_loader_dataset, (-1, 1))
-train_data.targets = np.array(train_data.targets)
-train_data.targets = np.reshape(train_data.targets, (-1, 1))
+    # Handle class imbalance issue by using weighted loss function or other techniques
+    ros = RandomOverSampler(sampling_strategy='not majority')
 
-print(train_loader_dataset.shape)
-print(train_data.targets.shape)
+    train_loader_dataset = np.fromiter(train_loader.dataset, dtype=object)
+    train_loader_dataset = np.reshape(train_loader_dataset, (-1, 1))
+    train_data.targets = np.array(train_data.targets)
+    train_data.targets = np.reshape(train_data.targets, (-1, 1))
 
-print("Original training data size: ", len(train_data.targets))
+    print(train_loader_dataset.shape)
+    print(train_data.targets.shape)
 
-X, y = ros.fit_resample(train_loader_dataset, train_data.targets)
+    print("Original training data size: ", len(train_data.targets))
 
-print("Resampled training data size: ", len(X))
+    X, y = ros.fit_resample(train_loader_dataset, train_data.targets)
 
-save_dir: str = 'post-ros-split-bio-gender-cleaned'
-os.makedirs(save_dir, exist_ok=True)
+    print("Resampled training data size: ", len(X))
 
-file: int = 0
+    os.makedirs(save_dir, exist_ok=True)
 
-gender_age_dir: int = 0
+    file: int = 0
 
-for folder in X:
+    for folder in tqdm(X, desc="Resampling", total=len(X)):
 
-    gender_age_dir += 1
+        file += 1
 
-    file += 1
+        str_file: str = f'{file}'
 
-    str_file: str = f'{file}'
+        # os.makedirs(os.path.join(save_dir, folder))
 
-    # os.makedirs(os.path.join(save_dir, folder))
+        for image_index in range(len(folder)):
 
-    for image_index in range(len(folder)):
+            image, label = folder[image_index]
 
-        image, label = folder[image_index]
+            str_label: str = f'{label}'
 
-        str_label: str = f'{label}'
+            os.makedirs(save_dir + '/' + str_label, exist_ok=True)
 
-        str_gender_age_dir: str = f'{gender_age_dir}'
+            image *= 255
 
-        os.makedirs(save_dir + '/' + str_gender_age_dir + '/' + str_label, exist_ok=True)
+            if image.shape[0] != 3:
+                image = image.repeat(3, 1, 1)
 
-        image = image * 255
+            image_bgr = image.permute(1, 2, 0).numpy()
+            image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            # image_bgr = cv2.equalizeHist(image_bgr)
 
-        if image.shape[0] != 3:
-            image = image.repeat(3, 1, 1)
+            filename: str = f'{str_file}.jpg'
 
-        image_bgr = image.permute(1, 2, 0).numpy()
-        image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-        # image_bgr = cv2.equalizeHist(image_bgr)
+            final_path = os.path.join(save_dir, str_label, filename)
 
-        filename: str = f'{str_file}.jpg'
+            cv2.imwrite(final_path, image_rgb)
 
-        final_path = os.path.join(save_dir, str_gender_age_dir, filename)
+            # print("Saving image:", final_path)
 
-        cv2.imwrite(final_path, image_rgb)
+    print("Resampling: Complete")
 
-        print("Saving image:", final_path)
 
-print("Done saving images to new directory")
+random_over_sampling('/Users/collindrake/Downloads/pre-ros-split-bio-gender-cleaned')

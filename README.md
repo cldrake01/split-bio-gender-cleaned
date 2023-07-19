@@ -9,7 +9,7 @@ for processing frames, aligning faces, overlaying landmarks, and performing rand
 - OpenCV
 - NumPy
 - tqdm
-- Torch
+- PyTorch
 - torchvision
 - imbalanced-learn
 
